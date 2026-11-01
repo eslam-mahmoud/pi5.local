@@ -1,0 +1,18 @@
+# Secrets: QR cards hold the hotspot password
+*-wifi-qr.png
+*-password.txt
+.env
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Editors and tools
+.claude/
+.idea/
+.vscode/
+.DS_Store
+*.log

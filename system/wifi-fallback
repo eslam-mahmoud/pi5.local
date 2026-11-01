@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# Runs every 2 min (wifi-fallback.timer).
+#   nothing on wlan0            -> start Hotspot
+#   Hotspot active              -> scan (AP stays up); known network visible -> drop AP, let NM join it
+#                                  scan impossible in AP mode -> blind retry every 5th tick (~10 min)
+#   real Wi-Fi active           -> nothing to do
+STATE=/run/wifi-fallback.count
+active(){ nmcli -t -f NAME,DEVICE connection show --active | awk -F: '$2=="wlan0"{print $1}'; }
+saved_ssids(){
+  nmcli -t -f NAME,TYPE connection show | awk -F: '$2=="802-11-wireless" && $1!="Hotspot"{print $1}' \
+  | while IFS= read -r c; do nmcli -g 802-11-wireless.ssid connection show "$c"; done
+}
+retry_known(){
+  nmcli connection down Hotspot >/dev/null 2>&1
+  sleep 45
+  [[ -z "$(active)" ]] && nmcli connection up Hotspot >/dev/null 2>&1
+}
+case "$(active)" in
+  "") nmcli connection up Hotspot >/dev/null 2>&1 ;;
+  Hotspot)
+    n=$(( $(cat "$STATE" 2>/dev/null || echo 0) + 1 )); echo "$n" > "$STATE"
+    scan=$(nmcli -t -f SSID device wifi list ifname wlan0 --rescan yes 2>/dev/null || true)
+    if [[ -n "$scan" ]]; then
+      if grep -qxF -f <(saved_ssids) <<<"$scan"; then echo 0 > "$STATE"; retry_known; fi
+    elif (( n >= 5 )); then
+      echo 0 > "$STATE"; retry_known
+    fi ;;
+  *) echo 0 > "$STATE" ;;
+esac
+exit 0

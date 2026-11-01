@@ -1,0 +1,8 @@
+[Unit]
+Description=Check Wi-Fi connectivity and fall back to hotspot
+[Timer]
+OnBootSec=90s
+OnUnitActiveSec=2min
+AccuracySec=10s
+[Install]
+WantedBy=timers.target

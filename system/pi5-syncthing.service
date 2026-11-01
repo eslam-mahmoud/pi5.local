@@ -1,0 +1,23 @@
+[Unit]
+Description=Syncthing for phone sync
+After=network.target
+
+[Service]
+User=pi5
+Group=pi5
+UMask=0002
+Environment=STNODEFAULTFOLDER=1
+Environment=HOME=/var/lib/pi5
+# The GUI stays on localhost. The dashboard talks to it and is the only way in.
+ExecStart=/usr/bin/syncthing serve --no-browser --no-restart --logflags=0 --home=/var/lib/pi5/syncthing --gui-address=127.0.0.1:8384
+Restart=always
+RestartSec=5
+
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/var/lib/pi5 /srv/pi5
+
+[Install]
+WantedBy=multi-user.target

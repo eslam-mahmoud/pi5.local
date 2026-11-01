@@ -1,0 +1,6 @@
+[Unit]
+Description=Start a Wi-Fi hotspot when no known network is reachable
+After=NetworkManager.service
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/wifi-fallback
