@@ -1,20 +1,15 @@
 // Sign in, the tab bar and routing between screens.
 
+import * as addons from "./addons.js";
 import * as downloads from "./downloads.js";
 import * as files from "./files.js";
 import * as home from "./home.js";
 import * as phones from "./phones.js";
 import * as tech from "./tech.js";
-import { $, api, closeSheet, empty, h, hooks, icon, loadStatus, postJson, stopPolling, title } from "./core.js";
+import { $, api, closeSheet, h, hooks, icon, loadStatus, postJson, stopPolling } from "./core.js";
 
-const rtw = {
-  show() {
-    return [title("RTW"), empty("Coming later", "This section is reserved.")];
-  },
-};
-
-const screens = { home, files, downloads, phones, rtw, tech };
-const tabs = { home: ["Home", "home"], files: ["Files", "folder"], phones: ["Phones", "phone"], rtw: ["RTW", "rtw"], tech: ["Tech", "tech"] };
+const screens = { home, files, downloads, phones, addons, tech };
+const tabs = { home: ["Home", "home"], files: ["Files", "folder"], phones: ["Phones", "phone"], addons: ["Addons", "addons"], tech: ["Tech", "tech"] };
 
 for (const [name, [label, symbol]] of Object.entries(tabs)) {
   $(`.tabbar [data-tab="${name}"]`).append(icon(symbol, "tab-icon"), h("span", {}, label));

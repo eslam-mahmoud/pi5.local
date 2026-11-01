@@ -18,6 +18,9 @@ pi5.local is meant for a trusted local network or its own hotspot.
 - **The service runs as the unprivileged `pi5` user** under systemd hardening. Its system rights
   are limited by `system/50-pi5-dashboard.rules`.
 - **Downloads run yt-dlp on links you paste**, so only use links you trust.
+- **Addon recipes run as root when installed.** Only recipes shipped in `addons/` can be
+  installed, never a link from the browser, so read a recipe before you add it. Each addon then
+  runs as its own unprivileged user.
 
 ## Keep these out of the repository
 

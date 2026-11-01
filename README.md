@@ -33,8 +33,9 @@ screen, and wide screens get a side rail instead of the bottom tabs.
 - **Files:** upload, download and organize preset files.
 - **Downloads:** video and audio from [yt-dlp](https://github.com/yt-dlp/yt-dlp), sorted into folders.
 - **Phones:** one-way backup with [Syncthing](https://syncthing.net), each phone in its own folder.
+- **Addons:** install and run other apps beside the dashboard, starting with the
+  [RTW](https://github.com/eslam-mahmoud/reinvent-the-wheel) offline library.
 - **Tech:** read-only system detail for technical users.
-- **RTW:** a reserved tab. RTW is a separate project with its own repository.
 
 ## Screenshots
 
@@ -42,16 +43,18 @@ screen, and wide screens get a side rail instead of the bottom tabs.
 | --- | --- | --- |
 | <img src="docs/screenshots/home.png" width="240" alt="Home screen with network, stats and actions"> | <img src="docs/screenshots/network.png" width="240" alt="Network sheet with saved and nearby networks"> | <img src="docs/screenshots/files.png" width="240" alt="Preset files list"> |
 
-| Downloads | Phones | Tech |
+| Downloads | Phones | Addons |
 | --- | --- | --- |
-| <img src="docs/screenshots/downloads.png" width="240" alt="Download form and progress"> | <img src="docs/screenshots/phones.png" width="240" alt="Synced phones and their folders"> | <img src="docs/screenshots/tech.png" width="240" alt="Technical overview of the Pi"> |
+| <img src="docs/screenshots/downloads.png" width="240" alt="Download form and progress"> | <img src="docs/screenshots/phones.png" width="240" alt="Synced phones and their folders"> | <img src="docs/screenshots/addons.png" width="240" alt="RTW running as an addon"> |
 
 <details>
-<summary>Desktop and light theme</summary>
+<summary>Tech tab, desktop and light theme</summary>
 
-<img src="docs/screenshots/desktop.png" alt="Home screen on a wide display with a side rail">
+<img src="docs/screenshots/tech.png" width="240" alt="Technical overview of the Pi">
 
 <img src="docs/screenshots/home-light.png" width="240" alt="Home screen in the light theme">
+
+<img src="docs/screenshots/desktop.png" alt="Home screen on a wide display with a side rail">
 
 </details>
 
@@ -106,7 +109,9 @@ System Settings → Privacy & Security → Local Network, then relaunch the brow
 | --- | --- |
 | `dashboard/` | Python service, one module per area |
 | `dashboard/static/` | Web app |
-| `system/` | Installer, systemd units, polkit rule and the WiFi fallback |
+| `addons/` | The registry of known addons, and one recipe for each that's ready |
+| `system/` | Installer, systemd units, polkit rule, addon helper and the WiFi fallback |
+| `docs/` | Addon guide and screenshots |
 | `deploy.sh` | Copies the project to the Pi and installs it |
 
 ## Layout on the Pi
@@ -119,6 +124,9 @@ System Settings → Privacy & Security → Local Network, then relaunch the brow
 | `/srv/pi5/phones/<phone>/<folder>` | Synced phone files |
 | `/srv/pi5/phones/<phone>/<folder>/.stversions` | Older copies of files a phone edited or deleted |
 | `/var/lib/pi5` | Password hash, phone list and Syncthing config |
+| `/opt/pi5-addons` | Addon recipes, replaced on each deploy |
+| `/var/lib/pi5-addons/<addon>` | An addon's code and config, deleted when it's removed |
+| `/srv/pi5/addons/<addon>` | An addon's files, kept when it's removed |
 
 Services: `pi5-dashboard` on port 80 and `pi5-syncthing` on port 22000. Both run as the
 unprivileged `pi5` user. The Syncthing admin page is only reachable from the Pi itself.
@@ -156,6 +164,61 @@ videos with the same title apart.
 - A download stops if the Pi has less than 1 GB free, and new ones are refused until there's room.
 - A running download survives a page reload, but not a dashboard or Pi restart.
 - Only download content you have the right to save.
+
+## Addons
+
+An addon is a separate project that the dashboard installs and runs beside itself, as its own
+service with its own user and port. The Addons tab installs, opens, starts, stops, updates and
+removes each one. Installing and updating need internet. Installed addons keep working on the
+hotspot.
+
+Known addons are listed in the [registry](addons/registry.json). To add one, see the
+[addon guide](docs/addons.md). The [master prompt](docs/addon-master-prompt.md) lets a coding
+assistant do the packaging.
+
+### RTW
+
+[RTW](https://github.com/eslam-mahmoud/reinvent-the-wheel) is an offline library with Wikipedia,
+books, notes, maps and apps. It runs unchanged from its own repository, at
+`http://pi5.local:8080`, and uses about 50 MB of RAM with a small library.
+
+- Add content from its admin page. On the Addons tab, open RTW's menu for **Show admin password**.
+- Library files are in `/srv/pi5/addons/rtw`.
+- Press **Restart** if the card says **Not responding**. RTW's scripts run in the background, so
+  a crash isn't restarted by itself. It does start again after a reboot.
+- **Update** installs the latest version of RTW's `main` branch.
+
+#### Add Wikipedia and maps
+
+Run these on the Pi over SSH. The download runs on the Pi and carries on if SSH disconnects, but
+it needs internet and stops if the Pi loses power.
+
+Arabic Wikipedia, text only, about 8.4 GB. Add `--setenv=ZIM_PATTERN=wikipedia_ar_all_mini` for
+the 3 GB version:
+
+```bash
+sudo systemd-run --collect --unit=rtw-wikipedia --uid=pi5-addon-rtw --setenv=HOME=/var/lib/pi5-addons/rtw /var/lib/pi5-addons/rtw/app/rtw fetch wikipedia
+```
+
+Saudi Arabia and Egypt maps, about 1.2 GB. Add `--setenv=MAXZOOM=14` for less street detail and
+a smaller file:
+
+```bash
+sudo systemd-run --collect --unit=rtw-maps --uid=pi5-addon-rtw --setenv=HOME=/var/lib/pi5-addons/rtw /var/lib/pi5-addons/rtw/app/rtw fetch maps
+```
+
+Follow either one, then press Ctrl+C to stop watching. The download keeps going:
+
+```bash
+journalctl -fu rtw-wikipedia
+```
+
+- **Wikipedia:** when it finishes, open RTW's menu on the Addons tab and tap **Restart**. Don't use
+  `rtw restart`, which RTW suggests, because that starts it outside its service.
+- **Maps:** they appear without a restart.
+- **If it's interrupted:** run the same command again. Wikipedia resumes, and maps start over.
+- **From a computer:** you can also upload a `.zim` or `.pmtiles` file on RTW's admin page, and
+  an uploaded `.zim` starts serving by itself.
 
 ## Tech tab
 

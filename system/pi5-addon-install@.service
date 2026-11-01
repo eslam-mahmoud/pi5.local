@@ -1,0 +1,9 @@
+[Unit]
+Description=Install or update pi5 addon %i
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/pi5-addon install %i
+TimeoutStartSec=30min

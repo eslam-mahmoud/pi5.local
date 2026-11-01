@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Addons: install, open, control, update and remove separate apps from a new Addons tab
+- RTW, the offline library, as the first addon, replacing the reserved RTW tab
+- Registry of known addons, with ready and planned entries
+- Addon guide and a master prompt for packaging new projects
+
 ## 0.1.0 - 2026-11-01
 
 First public version.

@@ -475,3 +475,7 @@ body[data-screen="tech"] .screen { max-width: 1120px; }
 @media (min-width: 1280px) {
   .tech-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
+
+/* Addons */
+.addon-name { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.addon-log { height: auto; max-height: 30dvh; white-space: pre-wrap; overflow-wrap: anywhere; }

@@ -8,6 +8,7 @@ from pathlib import Path
 
 from aiohttp import web
 
+import addons
 import files
 import network
 from common import STORAGE_DIR, ApiError, run
@@ -128,7 +129,7 @@ async def sizes():
 
 async def services():
     result = []
-    for unit, label in SERVICES.items():
+    for unit, label in {**SERVICES, **addons.installed()}.items():
         _, state, _ = await run("systemctl", "is-active", unit)
         result.append({"label": label, "active": state == "active"})
     return result

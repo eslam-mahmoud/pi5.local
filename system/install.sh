@@ -37,6 +37,13 @@ cp -R "$SOURCE/dashboard/." /opt/pi5-dashboard/
 find /opt/pi5-dashboard -name __pycache__ -prune -exec rm -rf {} +
 chown -R root:root /opt/pi5-dashboard
 
+# Root-owned, because the pi5-addon helper runs these recipes as root.
+rm -rf /opt/pi5-addons
+install -d -o root -g root -m 0755 /opt/pi5-addons /var/lib/pi5-addons /srv/pi5/addons
+cp -R "$SOURCE/addons/." /opt/pi5-addons/
+chown -R root:root /opt/pi5-addons
+install -m 0755 "$SOURCE/system/pi5-addon" /usr/local/sbin/
+
 if [[ ! -e /var/lib/pi5/auth.json ]]; then
   password="$(python3 -c 'import secrets; print(secrets.token_urlsafe(12))')"
   sudo -u pi5 PI5_DATA_DIR=/var/lib/pi5 python3 /opt/pi5-dashboard/app.py --init-password "$password"

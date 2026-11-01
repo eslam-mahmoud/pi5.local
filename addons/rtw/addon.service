@@ -1,0 +1,25 @@
+[Unit]
+Description=RTW offline library
+After=network.target
+
+[Service]
+# RTW's scripts start nginx, Kiwix and its admin service in the background.
+Type=oneshot
+RemainAfterExit=yes
+User=@USER@
+Group=@USER@
+Environment=HOME=@HOME@
+# A power cut leaves old process IDs behind, and RTW would take them as running.
+ExecStartPre=/bin/sh -c 'rm -f @HOME@/app/state/run/*.pid'
+ExecStart=/bin/bash @HOME@/app/rtw start
+ExecStop=/bin/bash @HOME@/app/rtw stop
+MemoryMax=500M
+
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=@HOME@ @STORAGE@
+
+[Install]
+WantedBy=multi-user.target

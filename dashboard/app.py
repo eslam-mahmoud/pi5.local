@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""pi5 dashboard: RTW (planned), preset storage and phone sync."""
+"""pi5 dashboard: status, network, files, phone sync, downloads and addons."""
 import argparse
 import getpass
 import json
@@ -8,6 +8,7 @@ from urllib.parse import urlsplit
 
 from aiohttp import web
 
+import addons
 import auth
 import downloads
 import files
@@ -68,6 +69,7 @@ def create_app():
     files.setup(app)
     downloads.setup(app)
     phones.setup(app)
+    addons.setup(app)
     tech.setup(app)
     app.router.add_get("/", index)
     app.router.add_static("/static", STATIC_DIR)

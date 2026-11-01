@@ -29,4 +29,6 @@ jobs:
             node --check "$work/$(basename "$file" .js).mjs"
           done
       - name: Check shell scripts
-        run: shellcheck --severity=warning deploy.sh system/install.sh system/wifi-fallback
+        run: shellcheck --severity=warning deploy.sh system/install.sh system/wifi-fallback system/pi5-addon addons/*/*.sh
+      - name: Check addon registry
+        run: python system/check-addons.py

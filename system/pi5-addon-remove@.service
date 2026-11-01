@@ -1,0 +1,7 @@
+[Unit]
+Description=Remove pi5 addon %i
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/pi5-addon remove %i
+TimeoutStartSec=5min

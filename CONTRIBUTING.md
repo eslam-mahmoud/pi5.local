@@ -3,6 +3,8 @@
 Bug reports and pull requests are welcome. For a large change, open an issue first so we can
 agree on the approach.
 
+To add another app, you usually want an addon. See the [addon guide](docs/addons.md).
+
 ## Run it locally
 
 The web app runs on any computer. Stats and network features need a real Pi, but the screens,
@@ -55,7 +57,11 @@ python3 -m compileall -q dashboard
 ```
 
 ```bash
-shellcheck --severity=warning deploy.sh system/install.sh system/wifi-fallback
+python3 system/check-addons.py
+```
+
+```bash
+shellcheck --severity=warning deploy.sh system/install.sh system/wifi-fallback system/pi5-addon addons/*/*.sh
 ```
 
 If you changed network code, test it on a real Pi. SSH usually runs over the same WiFi, so run

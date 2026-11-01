@@ -31,6 +31,7 @@ LOGS = {
     "pi5-syncthing": ("-u", "pi5-syncthing"),
     "NetworkManager": ("-u", "NetworkManager"),
     "wifi-fallback": ("-u", "wifi-fallback"),
+    "addons": ("-u", "pi5-addon-*"),
     "ssh": ("-u", "ssh"),
     "kernel": ("-k",),
 }

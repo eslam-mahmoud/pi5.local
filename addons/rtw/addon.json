@@ -1,0 +1,12 @@
+{
+  "id": "rtw",
+  "name": "RTW",
+  "summary": "Offline library with Wikipedia, books, notes, maps and apps.",
+  "icon": "rtw",
+  "port": 8080,
+  "path": "/",
+  "homepage": "https://github.com/eslam-mahmoud/reinvent-the-wheel",
+  "download": "About 50 MB, before any library content",
+  "needsMb": 500,
+  "credentials": { "user": "admin", "file": "admin-password.txt" }
+}

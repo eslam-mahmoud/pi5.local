@@ -5,6 +5,8 @@ from pathlib import Path
 
 DATA_DIR = Path(os.environ.get("PI5_DATA_DIR", "/var/lib/pi5"))
 STORAGE_DIR = Path(os.environ.get("PI5_STORAGE_DIR", "/srv/pi5"))
+ADDONS_DIR = Path(os.environ.get("PI5_ADDONS_DIR", "/opt/pi5-addons"))
+ADDONS_HOME = Path(os.environ.get("PI5_ADDONS_HOME", "/var/lib/pi5-addons"))
 SYNCTHING_HOME = Path(os.environ.get("PI5_SYNCTHING_HOME", DATA_DIR / "syncthing"))
 SYNCTHING_URL = os.environ.get("PI5_SYNCTHING_URL", "http://127.0.0.1:8384")
 PORT = int(os.environ.get("PI5_PORT", "80"))

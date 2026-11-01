@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# Installs, updates or removes a pi5 addon. Runs as root, from the pi5-addon-install@ and
+# pi5-addon-remove@ units or by hand over SSH:
+#
+#   sudo pi5-addon install rtw
+#   sudo pi5-addon remove rtw
+#
+# Addons come only from the root-owned /opt/pi5-addons. Installing one that's already
+# installed updates it. Removing keeps its files in /srv/pi5/addons. See docs/addons.md.
+set -euo pipefail
+
+die() { echo "pi5-addon: $*" >&2; exit 1; }
+
+action="${1:-}"
+addon="${2:-}"
+[[ "$action" == install || "$action" == remove ]] || die "usage: pi5-addon install|remove <addon>"
+[[ "$addon" =~ ^[a-z][a-z0-9-]{0,20}$ ]] || die "invalid addon name"
+
+recipe="/opt/pi5-addons/$addon"
+[[ -f "$recipe/addon.json" ]] || die "no addon called $addon"
+
+export ADDON_ID="$addon"
+export ADDON_USER="pi5-addon-$addon"
+export ADDON_HOME="/var/lib/pi5-addons/$addon"
+export ADDON_STORAGE="/srv/pi5/addons/$addon"
+unit="pi5-addon-$addon.service"
+
+install_addon() {
+  id -u "$ADDON_USER" >/dev/null 2>&1 ||
+    useradd --system --home-dir "$ADDON_HOME" --no-create-home --shell /usr/sbin/nologin "$ADDON_USER"
+  install -d -o "$ADDON_USER" -g "$ADDON_USER" -m 0755 "$ADDON_HOME"
+  install -d -o "$ADDON_USER" -g "$ADDON_USER" -m 0750 "$ADDON_STORAGE"
+
+  bash "$recipe/install.sh"
+
+  sed -e "s#@USER@#$ADDON_USER#g" -e "s#@HOME@#$ADDON_HOME#g" -e "s#@STORAGE@#$ADDON_STORAGE#g" \
+    "$recipe/addon.service" > "/etc/systemd/system/$unit"
+  chmod 0644 "/etc/systemd/system/$unit"
+  systemctl daemon-reload
+  systemctl enable "$unit"
+  systemctl restart "$unit"
+  echo "$addon is installed"
+}
+
+remove_addon() {
+  if [[ -f "/etc/systemd/system/$unit" ]]; then
+    systemctl disable --now "$unit"
+    rm -f "/etc/systemd/system/$unit"
+    systemctl daemon-reload
+  fi
+  if [[ -f "$recipe/uninstall.sh" ]]; then
+    bash "$recipe/uninstall.sh"
+  fi
+  rm -rf "$ADDON_HOME"
+  # The user stays, so kept files still belong to the addon if it's installed again.
+  echo "$addon is removed. Its files are still in $ADDON_STORAGE"
+}
+
+"${action}_addon"

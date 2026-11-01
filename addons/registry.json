@@ -1,0 +1,11 @@
+{
+  "addons": [
+    {
+      "id": "rtw",
+      "name": "RTW",
+      "summary": "Offline library with Wikipedia, books, notes, maps and apps.",
+      "repository": "https://github.com/eslam-mahmoud/reinvent-the-wheel",
+      "status": "ready"
+    }
+  ]
+}
