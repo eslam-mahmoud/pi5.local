@@ -1,8 +1,27 @@
-# pi5.local
+<p align="center">
+  <img src="dashboard/static/icon-180.png" width="96" height="96" alt="">
+</p>
 
-Phone-style web dashboard for a Raspberry Pi 5. Open `http://pi5.local` from any device on the
-same network to see the Pi's health, switch WiFi, store files, back up phones and download
-video or audio. It keeps working with no internet, because the Pi falls back to its own hotspot.
+<h1 align="center">pi5.local</h1>
+
+<p align="center">
+  A phone-style web dashboard that turns a Raspberry Pi 5 into your own small home server.
+</p>
+
+<p align="center">
+  <a href="https://github.com/eslam-mahmoud/pi5.local/actions/workflows/ci.yml"><img src="https://github.com/eslam-mahmoud/pi5.local/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license"></a>
+  <img src="https://img.shields.io/badge/Raspberry%20Pi-5-c51a4a" alt="Raspberry Pi 5">
+  <img src="https://img.shields.io/badge/frontend-no%20dependencies-2dd4bf" alt="No frontend dependencies">
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/overview.png" alt="The Home, Network, Downloads and Phones screens">
+</p>
+
+Open `http://pi5.local` from any device on the same network to see the Pi's health, switch WiFi,
+store files, back up phones and download video or audio. It keeps working with no internet,
+because the Pi falls back to its own hotspot.
 
 The backend is one small Python service. The frontend is plain HTML, CSS and JavaScript modules
 in `dashboard/static`, with no libraries and no build step. It can be added to a phone's home
@@ -16,6 +35,27 @@ screen, and wide screens get a side rail instead of the bottom tabs.
 - **Phones:** one-way backup with [Syncthing](https://syncthing.net), each phone in its own folder.
 - **Tech:** read-only system detail for technical users.
 - **RTW:** a reserved tab. RTW is a separate project with its own repository.
+
+## Screenshots
+
+| Home | Network | Files |
+| --- | --- | --- |
+| <img src="docs/screenshots/home.png" width="240" alt="Home screen with network, stats and actions"> | <img src="docs/screenshots/network.png" width="240" alt="Network sheet with saved and nearby networks"> | <img src="docs/screenshots/files.png" width="240" alt="Preset files list"> |
+
+| Downloads | Phones | Tech |
+| --- | --- | --- |
+| <img src="docs/screenshots/downloads.png" width="240" alt="Download form and progress"> | <img src="docs/screenshots/phones.png" width="240" alt="Synced phones and their folders"> | <img src="docs/screenshots/tech.png" width="240" alt="Technical overview of the Pi"> |
+
+<details>
+<summary>Desktop and light theme</summary>
+
+<img src="docs/screenshots/desktop.png" alt="Home screen on a wide display with a side rail">
+
+<img src="docs/screenshots/home-light.png" width="240" alt="Home screen in the light theme">
+
+</details>
+
+Screenshots use demo data. The theme follows your device's light or dark setting.
 
 ## Requirements
 
@@ -161,3 +201,17 @@ the internet. What the `pi5` user may do is limited by `system/50-pi5-dashboard.
 Add `dashboard/<name>.py` with a `setup(app)` function like the other modules and call it from
 `create_app()` in `app.py`. Add `static/js/<name>.js` exporting `show()`, which returns the
 screen's nodes, and register it in `static/js/main.js`.
+
+## Project status
+
+pi5.local is new and has been developed and tested on one Raspberry Pi 5 with 1 GB of RAM. See
+the [changelog](CHANGELOG.md) for what's included.
+
+## Contributing
+
+Bug reports and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) to run it
+locally, and [SECURITY.md](SECURITY.md) to report a security problem.
+
+## License
+
+[MIT](LICENSE)

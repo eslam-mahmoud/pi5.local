@@ -1,0 +1,34 @@
+name: Bug report
+description: Something on the dashboard doesn't work
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what you saw instead.
+    validations:
+      required: true
+  - type: dropdown
+    id: network
+    attributes:
+      label: How was the Pi connected?
+      options:
+        - WiFi
+        - Hotspot (pi5-ap)
+        - Ethernet
+    validations:
+      required: true
+  - type: input
+    id: setup
+    attributes:
+      label: Pi model, RAM and OS
+      placeholder: Pi 5, 1 GB, Debian 13 trixie
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Output of `journalctl -u pi5-dashboard -n 50`. Remove anything private first.
+      render: text

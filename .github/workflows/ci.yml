@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Check Python syntax
+        run: python -m compileall -q dashboard
+      - name: Check JavaScript syntax
+        run: |
+          work="$(mktemp -d)"
+          for file in dashboard/static/js/*.js; do
+            cp "$file" "$work/$(basename "$file" .js).mjs"
+            node --check "$work/$(basename "$file" .js).mjs"
+          done
+      - name: Check shell scripts
+        run: shellcheck --severity=warning deploy.sh system/install.sh system/wifi-fallback

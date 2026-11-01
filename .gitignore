@@ -10,6 +10,9 @@ __pycache__/
 .venv/
 venv/
 
+# Local test data
+dev/
+
 # Editors and tools
 .claude/
 .idea/
