@@ -180,7 +180,7 @@ assistant do the packaging.
 
 [RTW](https://github.com/eslam-mahmoud/reinvent-the-wheel) is an offline library with Wikipedia,
 books, notes, maps and apps. It runs unchanged from its own repository, at
-`http://pi5.local:8080`, and uses about 50 MB of RAM with a small library.
+`http://pi5.local:8080`, and uses about 130 MB of RAM with the full Arabic Wikipedia loaded.
 
 - Add content from its admin page. On the Addons tab, open RTW's menu for **Show admin password**.
 - Library files are in `/srv/pi5/addons/rtw`.
