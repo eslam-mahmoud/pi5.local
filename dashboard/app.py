@@ -54,7 +54,8 @@ async def guard(request, handler):
         # Usually files copied in over SSH as another user. See "Files" in the README.
         message = "The Pi won't let the dashboard change this. It was probably copied in over SSH"
         response = web.json_response({"error": message}, status=403)
-    response.headers.update(SECURITY_HEADERS)
+    for header, value in SECURITY_HEADERS.items():
+        response.headers.setdefault(header, value)  # files shown in the page set their own policy
     if not _private(request.path):
         # Revalidate, so phones pick up dashboard updates on the next load.
         response.headers["Cache-Control"] = "no-cache"

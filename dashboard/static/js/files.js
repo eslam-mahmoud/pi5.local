@@ -1,7 +1,7 @@
 // Files: preset storage, and the read-only browser for phone backups.
 
 import {
-  api, closeSheet, confirmSheet, empty, encodePath, formatBytes, formatDate, h, icon, loadStatus, meter,
+  $, api, closeSheet, confirmSheet, empty, encodePath, formatBytes, formatDate, h, icon, loadStatus, meter,
   openSheet, postJson, promptSheet, title, toast,
 } from "./core.js";
 
@@ -34,6 +34,93 @@ function deleteEntry(root, full, entry, reload) {
   };
 }
 
+const TEXT_PREVIEW_BYTES = 256 * 1024;
+
+function textPreview(url, size) {
+  const output = h("pre", { class: "log preview-text", tabindex: 0 }, "Loading…");
+  fetch(url, { headers: { Range: `bytes=0-${TEXT_PREVIEW_BYTES - 1}` } })
+    .then((response) => (response.ok ? response.arrayBuffer() : Promise.reject(new Error())))
+    .then((bytes) => {
+      output.textContent = new TextDecoder().decode(bytes) || "This file is empty.";
+      if (size > TEXT_PREVIEW_BYTES) output.textContent += "\n\n[Showing the first 256 KB. Download it to see the rest.]";
+    })
+    .catch(() => { output.textContent = "Couldn't load this file."; });
+  return output;
+}
+
+const cantShow = (text = "This browser can't show this file. Download it instead.") => h("p", { class: "viewer-note" }, text);
+
+function viewerContent(url, entry) {
+  const fallBack = (node) => node.addEventListener("error", () => node.replaceWith(cantShow()));
+  if (entry.view === "image") {
+    const image = h("img", { src: url, alt: entry.name });
+    fallBack(image);
+    return image;
+  }
+  if (entry.view === "video" || entry.view === "audio") {
+    const media = h(entry.view, { src: url, controls: true, preload: "metadata", playsinline: true });
+    fallBack(media);
+    return media;
+  }
+  if (entry.view === "text") return textPreview(url, entry.size);
+  // Phones that can't show PDFs in a page, such as Android, report it here.
+  if (navigator.pdfViewerEnabled === false) return cantShow("This browser opens PDFs outside the page. Use Open in a new tab.");
+  return h("iframe", { src: url, title: entry.name });
+}
+
+let viewing = null; // { root, path, items, index, writable, reload }
+
+function showViewed() {
+  const { root, path, items, index, writable, reload } = viewing;
+  const entry = items[index];
+  const full = path ? `${path}/${entry.name}` : entry.name;
+  const url = `/files/${root}/${encodePath(full)}`;
+  const viewUrl = `${url}?view=1`;
+  const dialog = $("#viewer");
+  const many = items.length > 1;
+  const step = (by) => () => {
+    viewing.index = (index + by + items.length) % items.length;
+    showViewed();
+  };
+  const position = many ? ` · ${index + 1} of ${items.length}` : "";
+  dialog.replaceChildren(
+    h("header", { class: "viewer-head" },
+      h("div", { class: "viewer-title" },
+        h("strong", { class: "clip" }, entry.name),
+        h("span", { class: "small" }, `${formatBytes(entry.size)} · ${formatDate(entry.mtime)}${position}`)),
+      h("button", { class: "icon-btn", type: "button", "aria-label": "Close", onclick: () => dialog.close() }, icon("close"))),
+    h("div", { class: "viewer-body" },
+      viewerContent(viewUrl, entry),
+      many ? h("button", { class: "viewer-nav prev", type: "button", "aria-label": "Previous file", onclick: step(-1) }, icon("back")) : null,
+      many ? h("button", { class: "viewer-nav next", type: "button", "aria-label": "Next file", onclick: step(1) }, icon("chevron")) : null),
+    h("footer", { class: "viewer-actions" },
+      h("a", { class: "btn primary", href: url, download: entry.name }, "Download"),
+      h("a", { class: "btn", href: viewUrl, target: "_blank", rel: "noopener" }, "New tab"),
+      writable
+        ? h("button", { class: "btn danger-text", type: "button", onclick: deleteEntry(root, full, entry, () => { dialog.close(); reload(); }) }, "Delete")
+        : null));
+  if (!dialog.open) dialog.showModal();
+}
+
+function openViewer(root, path, siblings, entry, writable, reload) {
+  const items = siblings.filter((item) => item.view);
+  viewing = { root, path, items, index: Math.max(items.indexOf(entry), 0), writable, reload };
+  showViewed();
+}
+
+// Media keeps playing in a closed dialog, so stop it on close.
+$("#viewer").addEventListener("close", () => {
+  $("#viewer").querySelectorAll("video, audio").forEach((media) => media.pause());
+  $("#viewer").replaceChildren();
+});
+$("#viewer").addEventListener("keydown", (event) => {
+  if (!viewing || viewing.items.length < 2 || event.target.closest("video, audio, pre")) return;
+  const by = { ArrowLeft: -1, ArrowRight: 1 }[event.key];
+  if (!by) return;
+  viewing.index = (viewing.index + by + viewing.items.length) % viewing.items.length;
+  showViewed();
+});
+
 function entrySheet(root, full, entry, writable, reload) {
   openSheet(entry.name,
     h("p", { class: "sheet-text" }, entry.dir ? "Folder" : `${formatBytes(entry.size)} · ${formatDate(entry.mtime)}`),
@@ -46,7 +133,7 @@ function entrySheet(root, full, entry, writable, reload) {
     writable ? h("button", { class: "btn wide danger-text", type: "button", onclick: deleteEntry(root, full, entry, reload) }, "Delete") : null);
 }
 
-export function fileRow(root, baseHash, path, entry, writable, reload) {
+export function fileRow(root, baseHash, path, entry, writable, reload, siblings = [entry]) {
   const full = path ? `${path}/${entry.name}` : entry.name;
   const meta = entry.dir ? "Folder" : `${formatBytes(entry.size)} · ${formatDate(entry.mtime)}`;
   const body = [
@@ -54,10 +141,11 @@ export function fileRow(root, baseHash, path, entry, writable, reload) {
     h("span", { class: "row-main" }, h("span", { class: "wrap" }, entry.name), h("span", { class: "row-note" }, meta)),
   ];
   const openDetails = () => entrySheet(root, full, entry, writable, reload);
+  const openFile = entry.view ? () => openViewer(root, path, siblings, entry, writable, reload) : openDetails;
   return h("li", { class: "file-row" },
     entry.dir
       ? h("a", { class: "row tap", href: `${baseHash}/${encodePath(full)}` }, body)
-      : h("button", { class: "row tap", type: "button", onclick: openDetails }, body),
+      : h("button", { class: "row tap", type: "button", onclick: openFile }, body),
     entry.dir && writable
       ? h("button", { class: "icon-btn", type: "button", "aria-label": `Options for ${entry.name}`, onclick: openDetails }, icon("more"))
       : null);
@@ -221,7 +309,7 @@ async function renderPresets(host, uploads, path) {
     h("button", { class: "btn wide", type: "button", onclick: () => { closeSheet(); folderPicker.click(); } }, "Upload a folder"),
     h("button", { class: "btn wide", type: "button", onclick: () => { closeSheet(); newFolder(); } }, "New folder"));
 
-  const rows = data.entries.map((entry) => fileRow("presets", baseHash, path, entry, true, reload));
+  const rows = data.entries.map((entry) => fileRow("presets", baseHash, path, entry, true, reload, data.entries));
   const list = rows.length
     ? h("ul", { class: "group" }, rows)
     : empty(path ? "This folder is empty" : "No preset files yet", "Tap + to upload files.");
@@ -279,7 +367,7 @@ export function showPhoneFiles(parts) {
   const baseHash = "#/phones/files";
   const host = h("div", {});
   api(`/api/files/phones?path=${encodeURIComponent(path)}`).then((data) => {
-    const rows = data.entries.map((entry) => fileRow("phones", baseHash, path, entry, false, () => {}));
+    const rows = data.entries.map((entry) => fileRow("phones", baseHash, path, entry, false, () => {}, data.entries));
     host.replaceChildren(
       crumbs(baseHash, "Phone files", path) ?? "",
       rows.length ? h("ul", { class: "group" }, rows) : empty("Nothing here yet", "Files appear after the phone syncs."));

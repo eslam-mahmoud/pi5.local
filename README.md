@@ -147,6 +147,11 @@ has no network.
 
 ## Files
 
+- Tap a photo, PDF, video, audio or text file to view it full screen, with **Download**,
+  **New tab** and **Delete** below it. The arrows, or the arrow keys, move through the other
+  files in the folder. This works in Files, Downloads and phone backups.
+- Other files, such as Word or Excel documents, open a sheet with **Download**. HTML and SVG
+  files are always downloaded, because they could run code inside the dashboard.
 - Upload files or a whole folder from **+**, or drag them onto the list. Subfolders are kept,
   and hidden files such as `.DS_Store` are skipped.
 - Nothing is overwritten. A file whose name is taken is saved beside it, as `name (1).ext`.

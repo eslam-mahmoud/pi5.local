@@ -6,6 +6,7 @@
 - RTW, the offline library, as the first addon, replacing the reserved RTW tab
 - Registry of known addons, with ready and planned entries
 - Upload whole folders in Files, from the + menu or by dragging, skipping files already there
+- View photos, PDFs, video, audio and text full screen in the file browser, with download
 - Fix New folder and other prompts that closed as soon as they opened
 - Explain a refused change instead of showing a server error
 - Addon guide and a master prompt for packaging new projects

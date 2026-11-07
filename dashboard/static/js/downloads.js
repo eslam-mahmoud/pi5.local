@@ -155,7 +155,7 @@ async function renderList() {
     listHost.replaceChildren(empty("Can't open this folder", error.message));
     return;
   }
-  const rows = data.entries.map((entry) => fileRow("downloads", baseHash, currentPath, entry, true, renderList));
+  const rows = data.entries.map((entry) => fileRow("downloads", baseHash, currentPath, entry, true, renderList, data.entries));
   listHost.replaceChildren(...[
     crumbs(baseHash, "Downloads", currentPath),
     rows.length ? h("ul", { class: "group" }, rows) : empty(currentPath ? "This folder is empty" : "Nothing saved yet", currentPath ? "" : "Videos and audio appear here, sorted into folders."),

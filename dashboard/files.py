@@ -19,6 +19,43 @@ CHUNK_BYTES = 1024 * 1024
 # Keeps the OS, logs and Syncthing's database working when storage is nearly full.
 RESERVED_BYTES = 512 * 1024 * 1024
 
+TEXT = "text/plain; charset=utf-8"
+# Files the page may show instead of downloading, by extension. Each is served with this
+# exact type, never a guess. HTML, SVG and everything else could run scripts, so they're
+# always downloads.
+VIEWABLE = {
+    **dict.fromkeys((".jpg", ".jpeg"), ("image", "image/jpeg")),
+    ".png": ("image", "image/png"),
+    ".gif": ("image", "image/gif"),
+    ".webp": ("image", "image/webp"),
+    ".avif": ("image", "image/avif"),
+    ".bmp": ("image", "image/bmp"),
+    **dict.fromkeys((".heic", ".heif"), ("image", "image/heic")),
+    **dict.fromkeys((".tif", ".tiff"), ("image", "image/tiff")),
+    ".pdf": ("pdf", "application/pdf"),
+    **dict.fromkeys((".mp4", ".m4v"), ("video", "video/mp4")),
+    ".webm": ("video", "video/webm"),
+    ".mov": ("video", "video/quicktime"),
+    ".mp3": ("audio", "audio/mpeg"),
+    ".m4a": ("audio", "audio/mp4"),
+    ".aac": ("audio", "audio/aac"),
+    **dict.fromkeys((".ogg", ".opus"), ("audio", "audio/ogg")),
+    ".wav": ("audio", "audio/wav"),
+    ".flac": ("audio", "audio/flac"),
+    **dict.fromkeys(
+        (".txt", ".md", ".csv", ".tsv", ".json", ".log", ".srt", ".vtt", ".yaml", ".yml", ".ini", ".conf"),
+        ("text", TEXT),
+    ),
+}
+VIEW_POLICY = {
+    "image": "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'",
+    "video": "default-src 'none'; media-src 'self'; style-src 'unsafe-inline'",
+    "audio": "default-src 'none'; media-src 'self'; style-src 'unsafe-inline'",
+    "text": "default-src 'none'; sandbox",
+    # Browsers draw PDFs with their own built-in viewer, which a stricter policy blocks.
+    "pdf": "frame-ancestors 'self'",
+}
+
 ACTIVE = {}  # running uploads, shown on the home page and checked before a reboot
 DOWNLOADING = set()  # ids of running yt-dlp jobs
 
@@ -35,6 +72,10 @@ def busy_reason():
 def is_hidden(name):
     # Dotfiles also cover .stfolder, .stversions and .upload-* temp files.
     return name.startswith((".", "~syncthing~"))
+
+
+def view_kind(name):
+    return VIEWABLE.get(os.path.splitext(name)[1].lower(), (None,))[0]
 
 
 def clean_name(name):
@@ -92,6 +133,7 @@ def _list(path):
                     "dir": is_dir,
                     "size": 0 if is_dir else info.st_size,
                     "mtime": int(info.st_mtime),
+                    "view": None if is_dir else view_kind(entry.name),
                 }
             )
     entries.sort(key=lambda e: (not e["dir"], e["name"].lower()))
@@ -112,11 +154,19 @@ async def download(request):
     path = resolve(root_dir(root), request.match_info["path"])
     if not path.is_file():
         raise ApiError(404, "Not found")
-    # Always an attachment, so uploaded HTML can never run inside the dashboard.
-    return web.FileResponse(
-        path,
-        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(path.name)}"},
-    )
+    name = quote(path.name)
+    kind, content_type = VIEWABLE.get(path.suffix.lower(), (None, None))
+    if kind and request.query.get("view"):
+        return web.FileResponse(
+            path,
+            headers={
+                "Content-Type": content_type,
+                "Content-Disposition": f"inline; filename*=UTF-8''{name}",
+                "Content-Security-Policy": VIEW_POLICY[kind],
+            },
+        )
+    # Anything else is an attachment, so uploaded HTML can never run inside the dashboard.
+    return web.FileResponse(path, headers={"Content-Disposition": f"attachment; filename*=UTF-8''{name}"})
 
 
 def _publish(tmp, directory, name):
