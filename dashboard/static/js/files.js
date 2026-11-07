@@ -63,11 +63,12 @@ export function fileRow(root, baseHash, path, entry, writable, reload) {
       : null);
 }
 
-function uploadFile(file, path, list) {
+// Resolves with an error message, or "" when the file arrived.
+function uploadFile(file, path, list, label) {
   const percent = h("span", { class: "muted" }, "0%");
   const bar = meter(0);
   const row = h("div", { class: "card" },
-    h("div", { class: "row-split" }, h("strong", { class: "clip" }, file.name), percent), bar);
+    h("div", { class: "row-split" }, h("strong", { class: "clip" }, label), percent), bar);
   list.append(row);
 
   return new Promise((resolve) => {
@@ -79,10 +80,9 @@ function uploadFile(file, path, list) {
       percent.textContent = `${done}%`;
       bar.firstChild.style.width = `${done}%`;
     };
-    const finish = (message) => {
+    const finish = (message = "") => {
       row.remove();
-      if (message) toast(`${file.name}: ${message}`);
-      resolve();
+      resolve(message);
     };
     request.onload = () => {
       if (request.status < 300) return finish();
@@ -93,6 +93,55 @@ function uploadFile(file, path, list) {
     request.onerror = () => finish("connection lost");
     request.send(file);
   });
+}
+
+const isHidden = (name) => name.startsWith(".");
+
+// Creates each missing folder on the way to `folder`, inside `base`.
+async function makeFolders(base, folder, made) {
+  let current = base;
+  for (const name of folder.split("/").filter(Boolean)) {
+    const next = current ? `${current}/${name}` : name;
+    if (!made.has(next)) {
+      try {
+        await postJson("/api/files/presets/folders", { path: current, name });
+      } catch (error) {
+        if (error.status !== 409) throw error; // 409: it's already there
+      }
+      made.add(next);
+    }
+    current = next;
+  }
+}
+
+// Every file inside a dropped folder, with its path relative to the drop.
+async function readEntry(entry, folder, found) {
+  if (isHidden(entry.name)) return;
+  if (entry.isFile) {
+    found.push({ file: await new Promise((resolve, reject) => entry.file(resolve, reject)), folder });
+    return;
+  }
+  const reader = entry.createReader();
+  const inside = folder ? `${folder}/${entry.name}` : entry.name;
+  for (;;) {
+    const batch = await new Promise((resolve, reject) => reader.readEntries(resolve, reject));
+    if (!batch.length) return;
+    for (const child of batch) await readEntry(child, inside, found);
+  }
+}
+
+async function droppedItems(dataTransfer) {
+  const entries = [...dataTransfer.items].map((item) => item.webkitGetAsEntry?.()).filter(Boolean);
+  if (!entries.length) return [...dataTransfer.files].map((file) => ({ file, folder: "" }));
+  const found = [];
+  for (const entry of entries) await readEntry(entry, "", found);
+  return found;
+}
+
+function pickedItems(files) {
+  return [...files]
+    .map((file) => ({ file, folder: (file.webkitRelativePath || "").split("/").slice(0, -1).join("/") }))
+    .filter(({ file, folder }) => !isHidden(file.name) && !folder.split("/").some(isHidden));
 }
 
 async function renderPresets(host, uploads, path) {
@@ -106,14 +155,56 @@ async function renderPresets(host, uploads, path) {
     return;
   }
 
-  const addFiles = async (files) => {
-    for (const file of files) await uploadFile(file, path, uploads);
+  // Files already in a folder, by name and size, so uploading a folder again only sends
+  // what's missing, for example after an interrupted upload.
+  const listings = new Map();
+  const sizesIn = async (folderPath) => {
+    if (!listings.has(folderPath)) {
+      let sizes = new Map();
+      try {
+        const data = await api(`/api/files/presets?path=${encodeURIComponent(folderPath)}`);
+        sizes = new Map(data.entries.filter((entry) => !entry.dir).map((entry) => [entry.name, entry.size]));
+      } catch { /* a new folder has nothing in it */ }
+      listings.set(folderPath, sizes);
+    }
+    return listings.get(folderPath);
+  };
+
+  const addItems = async (items) => {
+    const made = new Set();
+    const failed = [];
+    let skipped = 0;
+    for (const { file, folder } of items) {
+      const label = folder ? `${folder}/${file.name}` : file.name;
+      const target = [path, folder].filter(Boolean).join("/");
+      try {
+        await makeFolders(path, folder, made);
+      } catch (error) {
+        failed.push(`${label}: ${error.message}`);
+        continue;
+      }
+      if (folder && (await sizesIn(target)).get(file.name) === file.size) {
+        skipped += 1;
+        continue;
+      }
+      const error = await uploadFile(file, target, uploads, label);
+      if (error) failed.push(`${label}: ${error}`);
+    }
     reload();
     showDisk(host.parentElement.querySelector(".disk"));
+    const notes = [];
+    if (failed.length === 1) notes.push(failed[0]);
+    else if (failed.length) notes.push(`${failed.length} files weren't uploaded. ${failed[0]}`);
+    if (skipped) notes.push(`Skipped ${skipped} ${skipped === 1 ? "file" : "files"} already on the Pi.`);
+    if (notes.length) toast(notes.join(" "));
   };
   const picker = h("input", {
     type: "file", multiple: true, hidden: true,
-    onchange: (event) => addFiles([...event.target.files]),
+    onchange: (event) => addItems(pickedItems(event.target.files)),
+  });
+  const folderPicker = h("input", {
+    type: "file", multiple: true, hidden: true, webkitdirectory: true,
+    onchange: (event) => addItems(pickedItems(event.target.files)),
   });
   const newFolder = async () => {
     const name = await promptSheet({ heading: "New folder", label: "Folder name", action: "Create" });
@@ -127,6 +218,7 @@ async function renderPresets(host, uploads, path) {
   };
   const addMenu = () => openSheet("Add to Files",
     h("button", { class: "btn primary wide", type: "button", onclick: () => { closeSheet(); picker.click(); } }, "Upload files"),
+    h("button", { class: "btn wide", type: "button", onclick: () => { closeSheet(); folderPicker.click(); } }, "Upload a folder"),
     h("button", { class: "btn wide", type: "button", onclick: () => { closeSheet(); newFolder(); } }, "New folder"));
 
   const rows = data.entries.map((entry) => fileRow("presets", baseHash, path, entry, true, reload));
@@ -138,10 +230,10 @@ async function renderPresets(host, uploads, path) {
     class: "drop",
     ondragover: (event) => { event.preventDefault(); drop.classList.add("dropping"); },
     ondragleave: () => drop.classList.remove("dropping"),
-    ondrop: (event) => {
+    ondrop: async (event) => {
       event.preventDefault();
       drop.classList.remove("dropping");
-      addFiles([...event.dataTransfer.files]);
+      addItems(await droppedItems(event.dataTransfer));
     },
   }, list);
 
@@ -149,6 +241,7 @@ async function renderPresets(host, uploads, path) {
     crumbs(baseHash, "Files", path) ?? "",
     drop,
     picker,
+    folderPicker,
     h("button", { class: "fab", type: "button", "aria-label": "Add files or a folder", onclick: addMenu }, icon("plus")));
 }
 

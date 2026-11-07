@@ -164,6 +164,18 @@ export function openSheet(heading, ...content) {
   if (!sheet.open) sheet.showModal();
 }
 
+// A sheet opened right after another closes still receives that close event, once it's
+// already open. Only a close that leaves the sheet shut counts.
+function onSheetClosed(callback) {
+  const sheet = $("#sheet");
+  const listener = () => {
+    if (sheet.open) return;
+    sheet.removeEventListener("close", listener);
+    callback();
+  };
+  sheet.addEventListener("close", listener);
+}
+
 export function confirmSheet({ heading, message, action, danger = false }) {
   return new Promise((resolve) => {
     let answer = false;
@@ -175,7 +187,7 @@ export function confirmSheet({ heading, message, action, danger = false }) {
         onclick: () => { answer = true; closeSheet(); },
       }, action),
       h("button", { class: "btn wide", type: "button", onclick: closeSheet }, "Cancel"));
-    $("#sheet").addEventListener("close", () => resolve(answer), { once: true });
+    onSheetClosed(() => resolve(answer));
   });
 }
 
@@ -191,7 +203,7 @@ export function promptSheet({ heading, label, action }) {
         closeSheet();
       },
     }, input, h("button", { class: "btn primary wide", type: "submit" }, action)));
-    $("#sheet").addEventListener("close", () => resolve(answer), { once: true });
+    onSheetClosed(() => resolve(answer));
     input.focus();
   });
 }

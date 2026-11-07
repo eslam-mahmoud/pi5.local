@@ -50,6 +50,10 @@ async def guard(request, handler):
         response = web.json_response({"error": error.message}, status=error.status)
     except json.JSONDecodeError:
         response = web.json_response({"error": "Invalid request"}, status=400)
+    except PermissionError:
+        # Usually files copied in over SSH as another user. See "Files" in the README.
+        message = "The Pi won't let the dashboard change this. It was probably copied in over SSH"
+        response = web.json_response({"error": message}, status=403)
     response.headers.update(SECURITY_HEADERS)
     if not _private(request.path):
         # Revalidate, so phones pick up dashboard updates on the next load.

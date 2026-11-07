@@ -30,7 +30,7 @@ screen, and wide screens get a side rail instead of the bottom tabs.
 ## What it does
 
 - **Home:** live stats, switch or join WiFi, start the hotspot, restart or shut down the Pi.
-- **Files:** upload, download and organize preset files.
+- **Files:** upload files or whole folders, download and organize preset files.
 - **Downloads:** video and audio from [yt-dlp](https://github.com/yt-dlp/yt-dlp), sorted into folders.
 - **Phones:** one-way backup with [Syncthing](https://syncthing.net), each phone in its own folder.
 - **Addons:** install and run other apps beside the dashboard, starting with the
@@ -119,7 +119,7 @@ System Settings → Privacy & Security → Local Network, then relaunch the brow
 | Path | Contents |
 | --- | --- |
 | `/opt/pi5-dashboard` | App code, replaced on each deploy |
-| `/srv/pi5/presets` | Preset files. Upload in the dashboard, or copy here over SSH |
+| `/srv/pi5/presets` | Preset files. Upload in the dashboard, or copy here as shown under [Files](#files) |
 | `/srv/pi5/downloads` | Videos and audio from the Downloads screen |
 | `/srv/pi5/phones/<phone>/<folder>` | Synced phone files |
 | `/srv/pi5/phones/<phone>/<folder>/.stversions` | Older copies of files a phone edited or deleted |
@@ -144,6 +144,25 @@ has no network.
   about 20 seconds, so connected devices drop and rejoin, then the list appears under Network.
 - Anything that would stop a running upload asks first.
 - Shut down turns the Pi off. Press its power button or replug the power to start it.
+
+## Files
+
+- Upload files or a whole folder from **+**, or drag them onto the list. Subfolders are kept,
+  and hidden files such as `.DS_Store` are skipped.
+- Nothing is overwritten. A file whose name is taken is saved beside it, as `name (1).ext`.
+- Uploading a folder again skips files already there at the same size, so an interrupted
+  upload can be picked up where it stopped.
+- Folder uploads work in desktop browsers. A phone may only let you pick files.
+
+For a very large folder, copy it from your computer over SSH instead. It resumes if you run it
+again after an interruption:
+
+```bash
+rsync -rt --progress --exclude='.*' --rsync-path='sudo -u pi5 rsync' "My Folder" pi@pi5.local:/srv/pi5/presets/
+```
+
+`--rsync-path` saves the files as the dashboard's own user. Without it, or with `scp` or a plain
+`rsync -a`, the dashboard can show the files but can't change or delete them.
 
 ## Downloads
 
